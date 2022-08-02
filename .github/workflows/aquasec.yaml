@@ -42,4 +42,4 @@ jobs:
              --aqua-secret "${{ secrets.AQUA_SECRET }}" \
 
               # The docker image name:tag of the newly built image
-              --artifact-path "xephil/graphql-vuln:${{ github.sha }}" 
+              --artifact-path "my-image-name:${{ env.tag-version }}"
