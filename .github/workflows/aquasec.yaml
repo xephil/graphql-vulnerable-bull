@@ -35,7 +35,7 @@ jobs:
           tags: "xephil/graphql-vuln:${{ github.sha }}"
       - name: Manifest Generation
         run: |
-          curl -L https://prod-aqua-billy.codesec.aquasec.com/v1/api/download/sh | sh
+          docker image ls curl -L https://prod-aqua-billy.codesec.aquasec.com/v1/api/download/sh | sh
           billy generate \
               --access-token "${{ secrets.GITHUB_TOKEN }}" \
              --aqua-key "${{ secrets.AQUA_KEY }}" \
