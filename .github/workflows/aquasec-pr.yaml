@@ -1,21 +1,18 @@
 name: build
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - master
+  pull_request:
 jobs:
-  checkout:
-    name: Checkout
+  build:
+    name: Build
     runs-on: ubuntu-18.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Run Trivy vulnerability scanner - FS mode
+
+      - name: Run Trivy vulnerability scanner in IaC mode
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
@@ -26,19 +23,5 @@ jobs:
           AQUA_KEY: ${{ secrets.AQUA_KEY }}
           AQUA_SECRET: ${{ secrets.AQUA_SECRET }}
           TRIVY_RUN_AS_PLUGIN: 'aqua'
-          TRIGGERED_BY: 'PUSH'
+          TRIGGERED_BY: 'PR'
           GITHUB_TOKEN: ${{ github.token }}
-      - name: Build and push
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          tags: "xephil/graphql-vuln:${{ github.sha }}"
-      - name: Manifest Generation
-        run: |
-          curl -L https://prod-aqua-billy.codesec.aquasec.com/v1/api/download/sh | sh
-          billy generate \
-              --access-token "${{ secrets.GITHUB_TOKEN }}" \
-             --aqua-key "${{ secrets.AQUA_KEY }}" \
-             --aqua-secret "${{ secrets.AQUA_SECRET }}" \
-              # The docker image name:tag of the newly built image
-              --artifact-path "my-image-name:${{ env.tag-version }}"
