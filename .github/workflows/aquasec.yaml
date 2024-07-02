@@ -1,32 +1,27 @@
-name: build
+name: shiftleft
 on:
   push:
     branches:
       - main
-jobs:
-  all-in-one:
-    name: Aqua scanner
-    runs-on: ubuntu-latest
-    environment: main
-    env:
+
+env:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       DOCKER_REGISTRY: "stanhoe"
       DOCKER_REPOSITORY: "graphql"
       IMAGE_TAG: ${{ github.sha }}
-      AQUA_KEY: ${{ secrets.AQUA_KEY }}
-      AQUA_SECRET: ${{ secrets.AQUA_SECRET }}
-      TRIVY_RUN_AS_PLUGIN: 'aqua'
-      GITHUB_TOKEN: ${{ github.token }}
-      AQUA_URL: https://api.asia-1.supply-chain.cloud.aquasec.com
-      CSPM_URL: https://asia-1.api.cloudsploit.com
       BUILD_NUMBER: ${{ github.run_id }}
       BUILD_NAME: ${{ github.repository }}
       AQUA_TOKEN: ${{ secrets.AQUA_TOKEN }} # Aqua Scanner authentication
       AQUA_HOST: ${{ secrets.AQUA_HOST }} # Aqua Scanner authentication
       AQUA_USER: ${{ secrets.AQUA_USER }} # Aqua Registry
       AQUA_PASSWORD: ${{ secrets.AQUA_PASSWORD }} # Aqua Registry
-      
+
+jobs:
+  code-scanning:
+    name: Aqua Code Scanner
+    runs-on: ubuntu-latest
+    environment: main
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,8 +32,26 @@ jobs:
           args: trivy -d fs --scanners config,vuln,secret . --sast --reachability
           # To customize which severities to scan for, add the following flag: --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
           # To enable SAST scanning, add: --sast
-          # To enable npm/dotnet non-lock file scanning, add: --package-json / --dotnet-proj  
-          
+          # To enable reachability scanning, add: --reachability
+          # To enable npm/dotnet/gradle non-lock file scanning, add: --package-json / --dotnet-proj / --gradle
+        env:
+          AQUA_KEY: ${{ secrets.AQUA_KEY }}
+          AQUA_SECRET: ${{ secrets.AQUA_SECRET }}
+          GITHUB_TOKEN: ${{ github.token }}
+          AQUA_URL: https://api.asia-1.supply-chain.cloud.aquasec.com
+          CSPM_URL: https://asia-1.api.cloudsploit.com
+          TRIVY_RUN_AS_PLUGIN: 'aqua'
+          # For http/https proxy configuration add env vars: HTTP_PROXY/HTTPS_PROXY, CA-CRET (path to CA certificate)
+
+  image-scanning:
+    name: Aqua Image Scanner
+    needs: code-scanning
+    runs-on: ubuntu-latest
+    environment: main
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
       - name: Build image locally
         run: |
           docker build -t "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG" .
@@ -46,10 +59,10 @@ jobs:
       - name: Run Aqua Image Scanner
         run: |
           docker login registry.aquasec.com -u $AQUA_USER -p $AQUA_PASSWORD
-          docker pull registry.aquasec.com/scanner:2404.30.6 
+          docker pull registry.aquasec.com/scanner:2406.10.19 
           docker run --rm -v $GITHUB_WORKSPACE:/tmp -v /var/run/docker.sock:/var/run/docker.sock -e BUILD_NUMBER=$BUILD_NUMBER -e BUILD_JOB_NAME=$BUILD_NAME registry.aquasec.com/scanner:2404.30.6 scan -w /tmp --host $AQUA_HOST --token $AQUA_TOKEN --show-negligible --local $DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG --register-compliant --registry "Docker Hub" --htmlfile /tmp/out.html --jsonfile /tmp/out.json > /dev/null
           
-      - name: Manifest Generation
+      - name: Manifest Generation (SBOM)
         run: |
           export BILLY_SERVER=https://billy.asia-1.codesec.aquasec.com
           curl -sLo install.sh download.codesec.aquasec.com/billy/install.sh
