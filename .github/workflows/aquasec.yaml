@@ -53,7 +53,7 @@ jobs:
       - name: Upload Aqua Code Scanner Results as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: aqua-code-artifact
+          name: aqua-code-scan-results
           path: aqua-code-scanner.*
           
       - name: Manifest Generation (SBOM)
@@ -74,14 +74,7 @@ jobs:
             --cspm-url https://asia-1.api.cloudsploit.com \
             --artifact-path "${{ github.workspace }}"
 
-  image-scanning:
-    name: Aqua Image Scanner
-    needs: code-scanning
-    runs-on: ubuntu-latest
-    environment: main
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+
         
       - name: Build Image Locally
         run: |
@@ -96,7 +89,7 @@ jobs:
       - name: Upload Aqua Image Scanner Results as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: aqua-image-artifact
+          name: aqua-image-scan-results
           path: aqua-image-scanner.*
          
       - name: Manifest Generation (SBOM)
