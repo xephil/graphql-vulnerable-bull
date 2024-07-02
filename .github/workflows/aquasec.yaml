@@ -53,7 +53,7 @@ jobs:
       - name: Upload Aqua Code Scanner Results as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: aqua-artifact
+          name: aqua-code-artifact
           path: aqua-code-scanner.*
           
       - name: Manifest Generation (SBOM)
@@ -105,7 +105,7 @@ jobs:
       - name: Upload Aqua Image Scanner Results as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: aqua-artifact
+          name: aqua-image-artifact
           path: aqua-image-scanner.*
          
       - name: Manifest Generation (SBOM)
