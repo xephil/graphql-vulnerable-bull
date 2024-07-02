@@ -26,7 +26,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup pipeline enforcer
+      - name: Setup Aqua Pipeline Enforcer
         uses: aquasecurity/pipeline-enforcer-action@main
         env:
           CSPM_URL: https://asia-1.api.cloudsploit.com
@@ -50,8 +50,8 @@ jobs:
             aquasec/aqua-scanner \
             trivy -d fs --scanners config,vuln,secret --sast --reachability . --format template -o aqua-code-scanner.html
         
-      - name: Upload Aqua Code Scanner Artifact
-        uses: actions/upload-artifact@v3
+      - name: Upload Aqua Code Scanner Results as Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: aqua-artifact
           path: aqua-code-scanner.*
@@ -83,7 +83,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup pipeline enforcer
+      - name: Setup Aqua Pipeline Enforcer
         uses: aquasecurity/pipeline-enforcer-action@main
         env:
           CSPM_URL: https://asia-1.api.cloudsploit.com
@@ -92,7 +92,7 @@ jobs:
           aqua-key: ${{ secrets.AQUA_KEY }}
           aqua-secret: ${{ secrets.AQUA_SECRET }}
         
-      - name: Build image locally
+      - name: Build Image Locally
         run: |
           docker build -t "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG" .
           
@@ -102,8 +102,8 @@ jobs:
           docker pull registry.aquasec.com/scanner:2406.10.19 
           docker run --rm -v $GITHUB_WORKSPACE:/tmp -v /var/run/docker.sock:/var/run/docker.sock -e BUILD_NUMBER=$BUILD_NUMBER -e BUILD_JOB_NAME=$BUILD_NAME registry.aquasec.com/scanner:2404.30.6 scan -w /tmp --host $AQUA_HOST --token $AQUA_TOKEN --show-negligible --local $DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG --register-compliant --registry "Docker Hub" --htmlfile /tmp/aqua-image-scanner.html --jsonfile /tmp/aqua-image-scanner.json > /dev/null
 
-      - name: Upload Aqua Image Scanner Artifact
-        uses: actions/upload-artifact@v3
+      - name: Upload Aqua Image Scanner Results as Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: aqua-artifact
           path: aqua-image-scanner.*
