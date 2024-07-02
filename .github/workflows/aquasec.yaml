@@ -96,6 +96,7 @@ jobs:
 
   image-scanning:
     name: Aqua Image Scanner
+    needs: code-scanning
     runs-on: ubuntu-latest
     environment: main
     steps:
