@@ -1,4 +1,4 @@
-name: shiftleft
+name: Aqua
 on:
   push:
     branches:
@@ -23,35 +23,41 @@ jobs:
     runs-on: ubuntu-latest
     environment: main
     steps:
-      - name: Setup Pipeline Enforcer
-        uses: aquasecurity/pipeline-enforcer-action@main
-        env:
-          CSPM_URL: https://asia-1.api.cloudsploit.com
-          AQUA_URL: https://api.asia-1.supply-chain.cloud.aquasec.com
-        with:
-          aqua-key: ${{ secrets.AQUA_KEY }}
-          aqua-secret: ${{ secrets.AQUA_SECRET }}
-          
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Run Aqua Code Scanner
-        uses: docker://aquasec/aqua-scanner
-        with:
-          args: trivy -d fs --scanners config,vuln,secret . --sast --reachability
-          # To customize which severities to scan for, add the following flag: --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
-          # To enable SAST scanning, add: --sast
-          # To enable reachability scanning, add: --reachability
-          # To enable npm/dotnet/gradle non-lock file scanning, add: --package-json / --dotnet-proj / --gradle
-        env:
-          AQUA_KEY: ${{ secrets.AQUA_KEY }}
-          AQUA_SECRET: ${{ secrets.AQUA_SECRET }}
-          GITHUB_TOKEN: ${{ github.token }}
-          AQUA_URL: https://api.asia-1.supply-chain.cloud.aquasec.com
-          CSPM_URL: https://asia-1.api.cloudsploit.com
-          TRIVY_RUN_AS_PLUGIN: 'aqua'
-          # For http/https proxy configuration add env vars: HTTP_PROXY/HTTPS_PROXY, CA-CRET (path to CA certificate)
-          
+        run: |
+          docker pull aquasec/aqua-scanner
+          docker run \
+            -v ${{ github.workspace }}:/scanning \
+            -e AQUA_KEY=${{ secrets.AQUA_KEY }} \
+            -e AQUA_SECRET=${{ secrets.AQUA_SECRET }} \
+            -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+            -e AQUA_URL=https://api.asia-1.supply-chain.cloud.aquasec.com \
+            -e CSPM_URL=https://asia-1.api.cloudsploit.com \
+            -e TRIVY_RUN_AS_PLUGIN='aqua' \
+            -e INPUT_WORKING_DIRECTORY=/scanning \
+            aquasec/aqua-scanner \
+            trivy -d fs --scanners config,vuln,secret --sast --reachability . --format template -o aqua-code-scanner.html
+        
+      # - name: Run Aqua Code Scanner
+      #   uses: docker://aquasec/aqua-scanner
+      #   with:
+      #     args: trivy -d fs --scanners config,vuln,secret . --sast --reachability
+      #     # To customize which severities to scan for, add the following flag: --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+      #     # To enable SAST scanning, add: --sast
+      #     # To enable reachability scanning, add: --reachability
+      #     # To enable npm/dotnet/gradle non-lock file scanning, add: --package-json / --dotnet-proj / --gradle
+      #   env:
+      #     AQUA_KEY: ${{ secrets.AQUA_KEY }}
+      #     AQUA_SECRET: ${{ secrets.AQUA_SECRET }}
+      #     GITHUB_TOKEN: ${{ github.token }}
+      #     AQUA_URL: https://api.asia-1.supply-chain.cloud.aquasec.com
+      #     CSPM_URL: https://asia-1.api.cloudsploit.com
+      #     TRIVY_RUN_AS_PLUGIN: 'aqua'
+      #     # For http/https proxy configuration add env vars: HTTP_PROXY/HTTPS_PROXY, CA-CRET (path to CA certificate)
+
       - name: Manifest Generation (SBOM)
         run: |
           export BILLY_SERVER=https://billy.asia-1.codesec.aquasec.com
@@ -68,7 +74,7 @@ jobs:
             --aqua-key "${{ secrets.AQUA_KEY }}" \
             --aqua-secret "${{ secrets.AQUA_SECRET }}" \
             --cspm-url https://asia-1.api.cloudsploit.com \
-            --artifact-path "$GITHUB_WORKSPACE"
+            --artifact-path "${{ github.workspace }}"
 
   image-scanning:
     name: Aqua Image Scanner
@@ -76,15 +82,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: main
     steps:
-      - name: Setup Pipeline Enforcer
-        uses: aquasecurity/pipeline-enforcer-action@main
-        env:
-          CSPM_URL: https://asia-1.api.cloudsploit.com
-          AQUA_URL: https://api.asia-1.supply-chain.cloud.aquasec.com
-        with:
-          aqua-key: ${{ secrets.AQUA_KEY }}
-          aqua-secret: ${{ secrets.AQUA_SECRET }}
-          
       - name: Checkout code
         uses: actions/checkout@v4
         
