@@ -18,8 +18,8 @@ env:
       AQUA_PASSWORD: ${{ secrets.AQUA_PASSWORD }} # Aqua Registry
 
 jobs:
-  code-scanning:
-    name: Aqua Code Scanner
+  aqua:
+    name: Aqua Shift Left Security
     runs-on: ubuntu-latest
     environment: main
     steps:
@@ -52,31 +52,14 @@ jobs:
           TRIVY_RUN_AS_PLUGIN: 'aqua'
           INPUT_WORKING_DIRECTORY: '/scanning'
           # For http/https proxy configuration add env vars: HTTP_PROXY/HTTPS_PROXY, CA-CRET (path to CA certificate)
-     
-      # - name: Run Aqua Code Scanner
-      #   run: |
-      #     docker pull aquasec/aqua-scanner
-      #     docker run \
-      #       -v ${{ github.workspace }}:/scanning \
-      #       -e AQUA_KEY=${{ secrets.AQUA_KEY }} \
-      #       -e AQUA_SECRET=${{ secrets.AQUA_SECRET }} \
-      #       -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
-      #       -e AQUA_URL=https://api.asia-1.supply-chain.cloud.aquasec.com \
-      #       -e CSPM_URL=https://asia-1.api.cloudsploit.com \
-      #       -e TRIVY_RUN_AS_PLUGIN='aqua' \
-      #       -e INPUT_WORKING_DIRECTORY=/scanning \
-      #       -e OVERRIDE_BUILDSYSTEM='GitHub Actions' \
-      #       -e OVERRIDE_REPOSITORY_SOURCE='GitHub'
-      #       aquasec/aqua-scanner \
-      #       trivy fs --scanners misconfig,vuln,secret --sast --reachability . --format template -o aqua-code-scanner.html
-        
+
       - name: Upload Aqua Code Scanner Results as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: aqua-code-scan-results
           path: aqua-code-scanner.*
           
-      - name: Manifest Generation (SBOM)
+      - name: Manifest Generation (SBOM) - Code
         run: |
           export BILLY_SERVER=https://billy.asia-1.codesec.aquasec.com
           curl -sLo install.sh download.codesec.aquasec.com/billy/install.sh
@@ -93,19 +76,11 @@ jobs:
             --aqua-secret "${{ secrets.AQUA_SECRET }}" \
             --cspm-url https://asia-1.api.cloudsploit.com \
             --artifact-path "${{ github.workspace }}"
-
-  image-scanning:
-    name: Aqua Image Scanner
-    needs: code-scanning
-    runs-on: ubuntu-latest
-    environment: main
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
         
       - name: Build Image Locally
         run: |
           docker build -t "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG" .
+          docker save -o "$DOCKER_REGISTRY/$DOCKER_REPOSITORY".tar "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG"
           
       - name: Run Aqua Image Scanner
         run: |
@@ -118,8 +93,26 @@ jobs:
         with:
           name: aqua-image-scan-results
           path: aqua-image-scanner.*
+
+      - name: Manifest Generation (SBOM) - Docker Tar File
+        run: |
+          export BILLY_SERVER=https://billy.asia-1.codesec.aquasec.com
+          curl -sLo install.sh download.codesec.aquasec.com/billy/install.sh
+          curl -sLo install.sh.checksum https://github.com/argonsecurity/releases/releases/latest/download/install.sh.checksum
+          if ! cat install.sh.checksum | sha256sum --check; then
+          echo "install.sh checksum failed"
+          exit 1
+          fi
+          BINDIR="." sh install.sh
+          rm install.sh install.sh.checksum
+          ./billy generate \
+            --access-token "${{ secrets.GITHUB_TOKEN }}" \
+            --aqua-key "${{ secrets.AQUA_KEY }}" \
+            --aqua-secret "${{ secrets.AQUA_SECRET }}" \
+            --cspm-url https://asia-1.api.cloudsploit.com \
+            --artifact-path "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG"
          
-      - name: Manifest Generation (SBOM)
+      - name: Manifest Generation (SBOM) - Docker Image 
         run: |
           export BILLY_SERVER=https://billy.asia-1.codesec.aquasec.com
           curl -sLo install.sh download.codesec.aquasec.com/billy/install.sh
