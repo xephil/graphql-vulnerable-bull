@@ -95,7 +95,7 @@ jobs:
 
       - name: Export Docker Tar File
         run: |
-          docker save -o "DOCKER_REPOSITORY.tar" "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG"
+          docker save -o "$DOCKER_REPOSITORY.tar" "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG"
           ls -la
 
       - name: Manifest Generation (SBOM) - Docker Tar File
