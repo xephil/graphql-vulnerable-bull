@@ -80,20 +80,23 @@ jobs:
       - name: Build Image Locally
         run: |
           docker build -t "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG" .
-          docker save -o "$GITHUB_WORKSPACE/DOCKER_REPOSITORY.tar" "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG"
-          ls -la
           
       - name: Run Aqua Image Scanner
         run: |
           docker login registry.aquasec.com -u $AQUA_USER -p $AQUA_PASSWORD
           docker pull registry.aquasec.com/scanner:2406.10.19 
           docker run --rm -v $GITHUB_WORKSPACE:/tmp -v /var/run/docker.sock:/var/run/docker.sock -e BUILD_NUMBER=$BUILD_NUMBER -e BUILD_JOB_NAME=$BUILD_NAME registry.aquasec.com/scanner:2404.30.6 scan -w /tmp --host $AQUA_HOST --token $AQUA_TOKEN --show-negligible --local $DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG --register-compliant --registry "Docker Hub" --htmlfile /tmp/aqua-image-scanner.html --jsonfile /tmp/aqua-image-scanner.json > /dev/null
-
+          
       - name: Upload Aqua Image Scanner Results as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: aqua-image-scan-results
           path: aqua-image-scanner.*
+
+      - name: Export Docker Tar File
+        run: |
+          docker save -o "DOCKER_REPOSITORY.tar" "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG"
+          ls -la
 
       - name: Manifest Generation (SBOM) - Docker Tar File
         run: |
@@ -112,7 +115,7 @@ jobs:
             --aqua-key "${{ secrets.AQUA_KEY }}" \
             --aqua-secret "${{ secrets.AQUA_SECRET }}" \
             --cspm-url https://asia-1.api.cloudsploit.com \
-            --artifact-path "$GITHUB_WORKSPACE/$DOCKER_REPOSITORY.tar"
+            --artifact-path "$DOCKER_REPOSITORY.tar"
          
       - name: Manifest Generation (SBOM) - Docker Image 
         run: |
