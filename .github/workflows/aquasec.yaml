@@ -80,7 +80,7 @@ jobs:
       - name: Build Image Locally
         run: |
           docker build -t "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG" .
-          docker save -o "$DOCKER_REGISTRY/$DOCKER_REPOSITORY".tar "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG"
+          docker save -o "$DOCKER_REPOSITORY".tar "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG"
           
       - name: Run Aqua Image Scanner
         run: |
@@ -110,7 +110,7 @@ jobs:
             --aqua-key "${{ secrets.AQUA_KEY }}" \
             --aqua-secret "${{ secrets.AQUA_SECRET }}" \
             --cspm-url https://asia-1.api.cloudsploit.com \
-            --artifact-path "$DOCKER_REGISTRY/$DOCKER_REPOSITORY:$IMAGE_TAG"
+            --artifact-path "${{ github.workspace }}/$DOCKER_REPOSITORY".tar"
          
       - name: Manifest Generation (SBOM) - Docker Image 
         run: |
